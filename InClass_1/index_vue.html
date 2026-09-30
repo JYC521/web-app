@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager - Vue </title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #ddd;
+        }
+        input[type="text"] {
+            padding: 6px;
+            width: 220px;
+            margin-right: 5px;
+        }
+        button {
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .task-item.completed span {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .error {
+            color: red;
+            font-size: 0.85rem;
+            margin-top: 4px;
+            display: none;
+        }
+        .stats {
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        @media (max-width: 480px) {
+            body {
+                margin: 10px;
+            }
+            .container {
+                padding: 10px;
+            }
+            input[type="text"] {
+                width: 100%;
+                margin-bottom: 8px;
+                box-sizing: border-box;
+            }
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="container">
+        <h1>Task Manager - Vue</h1>
+
+        <div class="section">
+            <form @submit.prevent="addTask">
+                <label for="task-input">新增任務：</label>
+                <input type="text" id="task-input" v-model="newText" placeholder="任務名稱">
+                <button type="submit">新增</button>
+                <div id="error-msg" class="error" :style="{ display: showError ? 'block' : 'none' }">請輸入任務名稱！</div>
+            </form>
+        </div>
+
+        <div class="section">
+            <span>篩選：</span>
+            <button type="button" @click="setFilter('all')" :style="{ fontWeight: currentFilter === 'all' ? 'bold' : 'normal' }">全部</button>
+            <button type="button" @click="setFilter('active')" :style="{ fontWeight: currentFilter === 'active' ? 'bold' : 'normal' }">未完成</button>
+            <button type="button" @click="setFilter('completed')" :style="{ fontWeight: currentFilter === 'completed' ? 'bold' : 'normal' }">已完成</button>
+        </div>
+
+        <div class="section">
+            <ul id="task-list" class="task-list">
+                <li v-if="filteredTasks.length === 0" style="color: #888; padding: 5px 0;">目前無符合的任務</li>
+                <li v-for="task in filteredTasks" :key="task.id" class="task-item" :class="{ completed: task.completed }">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" v-model="task.completed">
+                        <span>{{ task.text }}</span>
+                    </label>
+                    <button type="button" @click="deleteTask(task.id)">刪除</button>
+                </li>
+            </ul>
+        </div>
+
+        <div id="task-stats" class="stats">
+            共 {{ tasks.length }} 項 未完成 {{ activeCount }} 項
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                const newText = ref('');
+                const showError = ref(false);
+                const currentFilter = ref('all');
+                
+                const tasks = ref([
+                    { id: 1, text: '完成 Web App 實作', completed: false },
+                    { id: 2, text: '完成 JavaScript 練習', completed: false },
+                    { id: 3, text: '完成課程作業', completed: true }
+                ]);
+
+                // 新增任務
+                const addTask = () => {
+                    const text = newText.value.trim();
+                    if (!text) {
+                        showError.value = true;
+                        return;
+                    }
+                    showError.value = false;
+                    tasks.value.push({
+                        id: Date.now(),
+                        text: text,
+                        completed: false
+                    });
+                    newText.value = '';
+                };
+
+                // 刪除任務
+                const deleteTask = (id) => {
+                    tasks.value = tasks.value.filter(t => t.id !== id);
+                };
+
+                // 設定篩選
+                const setFilter = (filter) => {
+                    currentFilter.value = filter;
+                };
+
+                // 計算未完成數量
+                const activeCount = computed(() => {
+                    return tasks.value.filter(t => !t.completed).length;
+                });
+
+                // 根據篩選條件回傳陣列
+                const filteredTasks = computed(() => {
+                    if (currentFilter.value === 'active') {
+                        return tasks.value.filter(t => !t.completed);
+                    }
+                    if (currentFilter.value === 'completed') {
+                        return tasks.value.filter(t => t.completed);
+                    }
+                    return tasks.value;
+                });
+
+                return {
+                    newText,
+                    showError,
+                    currentFilter,
+                    tasks,
+                    addTask,
+                    deleteTask,
+                    setFilter,
+                    activeCount,
+                    filteredTasks
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
